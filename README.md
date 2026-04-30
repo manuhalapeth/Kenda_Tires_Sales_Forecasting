@@ -188,7 +188,7 @@ The forecasting system is currently a series of Jupyter notebooks executed manua
 - **Self-hostable**: Can run on a small VM (2 vCPU, 4 GB RAM is sufficient for this pipeline), so Kenda's sales data never leaves their environment.
 - **No-code connectors**: Native nodes for Google Sheets, Slack, email, HTTP, and file I/O mean no glue code is needed to connect the notebook output to downstream consumers.
 - **Parameterised notebooks via Papermill**: The `TRAIN_END` parameter can be injected at runtime so the same notebook always trains on the full available history without manual edits.
-- **Retry and error handling**: If the data pull fails or the model crashes, n8n handles retries and routes failures to an alert channel — the pipeline self-monitors.
+- **Retry and error handling**: If the data pull fails or the model crashes, n8n handles retries and routes failures to an alert channel. The pipeline self-monitors.
 - **Extensibility**: As the system matures, the same workflow can be extended to write forecasts directly into an ERP or inventory management system via API calls, eliminating the manual CSV handoff entirely.
 
 **Scaling to more items or categories**
