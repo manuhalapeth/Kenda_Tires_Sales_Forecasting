@@ -41,7 +41,7 @@ This was the starting point. The notebook performs a comprehensive EDA on the ra
 
 The ML models (Linear Regression, Random Forest, XGBoost, Prophet) were fed features derived from the same month being predicted. Specifically:
 
-- **COGS (Cost of Goods Sold)**: This figure is only settled after the transactions of month T have occurred. It is not available before the month begins — it is a byproduct of the sale, not a predictor of it.
+- **COGS (Cost of Goods Sold)**: This figure is only settled after the transactions of month T have occurred. It is not available before the month begins. It is a byproduct of the sale and not a predictor of it.
 - **QtyShipped and NumTransactions**: These are counts of events that happened *during* month T, not before it. Including them as input features means the model is effectively told how busy the month is before being asked to predict how busy the month will be.
 - **NumCustomers and NumItems**: Similarly, knowing how many unique customers or SKUs were active in month T requires seeing all of month T's data.
 
@@ -72,7 +72,7 @@ When the client moved from wanting a single aggregate revenue number to wanting 
 
 - **Seasonal average for intermittent items**: The 664 items with sparse sales history (< 60% of months active) were forecast by taking the mean revenue for the same calendar month from prior years. This is simple and interpretable but ignores trend, cross-item signals, and recent momentum. For fast-growing or newly-active items, the seasonal mean anchors to old, irrelevant history.
 - **No cross-series features**: Each item was forecast in isolation. Product-line-level or total-market-level signals (e.g., the entire 0003 product line accelerating) were invisible to the model.
-- **Proportional reconciliation**: After generating item-level forecasts, the notebook scaled all items proportionally so they sum to the Holt-Winters aggregate target. This is statistically suboptimal because it treats all items as equally uncertain — a high-revenue item with a confident forecast gets the same adjustment as a noisy low-revenue item.
+- **Proportional reconciliation**: After generating item-level forecasts, the notebook scaled all items proportionally so they sum to the Holt-Winters aggregate target. This is statistically suboptimal because it treats all items as equally uncertain, a high-revenue item with a confident forecast gets the same adjustment as a noisy low-revenue item.
 - **Only 28 features**: The feature set, while effective for the aggregate case, did not capture quantity dynamics, implicit price signals, customer breadth trends, or warehouse concentration at the item level.
 - **Revenue-weighted MAPE plateau**: Regular items achieved ~79% revenue-weighted MAPE; the overall number was ~123%. The gap between regular and intermittent performance was large and unaddressed.
 
@@ -127,7 +127,7 @@ The confidence grading system is actionable. Items with grade A (confidence scor
 
 **Why it happens**: The sales data begins January 2022. Many ML models and time-series techniques benefit from 5–10+ years of history to reliably learn multi-year seasonality, business cycles, and product lifecycle curves. With 50 months the model sees at most four complete seasonal cycles.
 
-**Mitigation**: As each month passes, retrain the production models on the expanding dataset. The lag_24 and roll_24 features already prepare for this — they will start delivering signal once 24 months of item-level history exist. Adding external signals (industry tyre sales indices, weather patterns, raw rubber prices) can partially substitute for historical depth.
+**Mitigation**: As each month passes, retrain the production models on the expanding dataset. The lag_24 and roll_24 features already prepare for this. They will start delivering signal once 24 months of item-level history exist. Adding external signals (industry tyre sales indices, weather patterns, raw rubber prices) can partially substitute for historical depth.
 
 ### 3. Recursive forecasting error accumulation
 
