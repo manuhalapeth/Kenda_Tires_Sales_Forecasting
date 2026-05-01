@@ -30,6 +30,86 @@ Kenda/
 ├── forecast_dashboard.png             # Forecast comparison dashboard
 └── forecast_final.png                 # Final forecast chart (dark-mode publication quality)
 ```
+## How to Run                                                               
+                                                                              
+  ### Prerequisites                                                           
+                                                                              
+  - Python 3.9 or higher                                                      
+  - Jupyter Notebook or JupyterLab
+  - The raw sales data file: `SalesData_ATW.xlsx` (not included in this       
+  repository. Place it in the project root before running)                   
+                                                                              
+  ### Installation                                                            
+                                                                            
+  Clone the repository and install dependencies directly from within the      
+  notebook. No separate `requirements.txt` is needed. Cell 1 of the notebook
+  handles all package installation automatically:                             
+                                                                            
+  ```bash
+  git clone https://github.com/manuhalapeth/Kenda.git
+  cd Kenda
+  jupyter notebook item_forecasting_improved.ipynb
+  ```                                                                         
+  
+  The following packages are installed automatically on first run:            
+                                                                            
+  | Package | Purpose |
+  |---|---|
+  | `lightgbm` | Gradient boosting model for regular items |
+  | `scikit-learn` | Evaluation utilities |                                   
+  | `pandas`, `numpy` | Data manipulation |                                   
+  | `matplotlib` | Visualisations |                                           
+  | `openpyxl` | Reading the `.xlsx` sales file |                             
+  | `statsmodels`, `scipy` | Statistical tests |                              
+  | `optuna` | Hyperparameter tuning |
+  | `statsforecast` | CrostonSBA and AutoETS for intermittent items |         
+  | `utilsforecast` | Forecast evaluation utilities |
+  | `chronos-forecasting` | Optional foundation model (top-100 items) |       
+                                                                              
+  > `chronos-forecasting` requires PyTorch. If installation fails or times    
+  out, the notebook falls back gracefully to LightGBM + statsforecast only. No
+   manual intervention needed.                                                
+                  
+  ### Running the Notebook
+
+  Open `item_forecasting_improved.ipynb` and run all cells top to bottom. The 
+  notebook is fully self-contained and executes in a single pass.
+                                                                              
+  **Expected runtime:** approximately 10–20 minutes depending on hardware     
+  (Optuna tuning + walk-forward CV are the longest steps).
+                                                                              
+  **Output files generated:**
+
+  | File | Description |
+  |---|---|
+  | `item_forecasts_improved.csv` | Full Q2 2026 forecasts — 1,368 items × 3
+  months, with confidence grades |                                            
+  | `item_forecasts_tidy.csv` | Tidy-format version of the above (run
+  `tidy_output_file.py` separately) |                                         
+  | `figures/` | All report figures saved automatically |
+                                                                              
+  ### Generating the Tidy Output (Optional)                                   
+  
+  After the notebook completes, run the following to produce a cleaned,       
+  analysis-ready CSV:
+                                                                              
+  python tidy_output_file.py
+  ```                       
+     
+  This reads `item_forecasts_improved.csv` and outputs
+  `item_forecasts_tidy.csv` with standardised column names, ISO-8601 dates,   
+  and sorted rows.                                                         
+                                                                              
+  ### Notes       
+           
+  - `SalesData_ATW.xlsx` is excluded from version control via `.gitignore`.
+  The notebook will fail at the data loading step if this file is not present 
+  in the project root.                                                       
+  - The `FILE_PATH` variable in Cell 2 defaults to                            
+  `'/Users/manuhalapeth/Kenda/SalesData_ATW.xlsx'`. Update this to a relative
+  path (e.g. `'SalesData_ATW.xlsx'`) before sharing.                          
+  - All random seeds are fixed (`RANDOM_STATE = 42`) — results are fully
+  reproducible given the same input data.  
 
 ---
 
