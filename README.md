@@ -90,7 +90,7 @@ This is the final deliverable. It addresses every limitation of v4 with producti
 
 ---
 
-**Structure
+###Structure
 
 The file is in **tidy (long) format**: one row per item per forecast month.
 
