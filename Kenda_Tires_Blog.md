@@ -22,7 +22,7 @@ The business cost of item-level error differs by item tier:
 | Tier C (319 items) | $5K–$25K/month | Acceptable buffer; moderate consequence |
 | Tier D / E (952 items) | < $5K/month | High MAPE tolerated; low revenue impact |
 
-The system's revenue-weighted MAPE of **47.56%** accounts for this tiering implicitly, errors on Tier A and B items are penalised most. The portfolio aggregate MAPE of **10.6%** validates that the item-level signals, when summed, remain aligned with observed total revenue.
+The system's revenue-weighted MAPE of **46.58%** accounts for this tiering implicitly, errors on Tier A and B items are penalised most. The portfolio aggregate MAPE of **11.0%** validates that the item-level signals, when summed, remain aligned with observed total revenue.
 
 ---
 
@@ -327,19 +327,20 @@ Hyperparameter search space:
     reg_lambda           uniform(0.0, 2.0)
 
 Best params:
-    learning_rate:       0.0201
-    max_depth:           5
-    num_leaves:          31
-    min_child_samples:   15
-    subsample:           0.806
-    colsample_bytree:    0.484
-    reg_alpha:           0.292
-    reg_lambda:          0.733
+    learning_rate:       0.0735
+    max_depth:           4
+    num_leaves:          29
+    min_child_samples:   5
+    subsample:           0.785
+    colsample_bytree:    0.666
+    reg_alpha:           0.960
+    reg_lambda:          1.334
 
-Best validation MAE: $2,105 (per item-month)
+Best validation MAE: $3,767 (Optuna best trial)
+Final model validation MAE: $2,995 (300 trees with best params)
 ```
 
-The relatively low `colsample_bytree` (0.484) indicates the model benefits from feature subsampling, consistent with the cross-series features introducing correlated signal that the regularisation needs to suppress per split.
+The `colsample_bytree` of 0.666 and high `reg_alpha` (0.960) indicate the model benefits from both feature subsampling and L1 regularisation, consistent with the cross-series features introducing correlated signal that needs to be suppressed per split.
 
 #### Training Target: log1p Transform
 
@@ -363,10 +364,10 @@ Fold 2:  Train[months 1..21]  →  Predict[month 22]
 Fold 30: Train[months 1..49]  →  Predict[month 50]
 
 Per-item OOF predictions aggregated → per-item walk-forward MAPE
-Walk-forward CV MAPE (aggregate, regular items): 139.50%
+Walk-forward CV MAPE (aggregate, regular items): 140.30%
 ```
 
-The walk-forward CV MAPE (139.50%) being higher than the test MAPE (42.76% revenue-weighted) is a structural result: early CV folds use very little history per item, producing large errors. As history grows, accuracy improves, this is the learning curve inherent to a global model on short per-item series.
+The walk-forward CV MAPE (140.30%) being higher than the test MAPE (41.53% revenue-weighted) is a structural result: early CV folds use very little history per item, producing large errors. As history grows, accuracy improves, this is the learning curve inherent to a global model on short per-item series.
 
 The per-item walk-forward MAPE feeds directly into the confidence scoring system.
 
@@ -426,7 +427,7 @@ AIC-selected per item. Fallback to CrostonSBA on fitting failure.
 ```
 Full series: Jan 2022 – Feb 2026 (50 months)
 
-Pure-train (regular items): Jan 2022 – Oct 2024  (27,015 rows after dropna)
+Pure-train (regular items): Feb 2022 – Oct 2024  (19,649 rows after dropna)
 Validation (regular items): Nov 2024 – Apr 2025  ( 3,434 rows — 6 months)
 Test (held-out):            May 2025 – Feb 2026  ( 5,557 rows — 10 months)
 
@@ -482,9 +483,9 @@ The WLS diagonal estimator is used rather than the full shrinkage estimator beca
 
 | Metric | Pre-MinT | Post-MinT | Change |
 |---|---|---|---|
-| Rev-wtd MAPE (all) | 47.56% | 47.48% | −0.08 pp |
-| Rev-wtd MAPE (regular) | 42.76% | 42.71% | −0.05 pp |
-| Rev-wtd MAPE (intermittent) | 61.86% | 61.66% | −0.20 pp |
+| Rev-wtd MAPE (all) | 46.58% | 46.58% | 0.00 pp |
+| Rev-wtd MAPE (regular) | 41.44% | 41.53% | +0.09 pp |
+| Rev-wtd MAPE (intermittent) | 61.86% | 61.61% | −0.25 pp |
 
 MinT produces modest item-level improvement because the WLS diagonal estimator is conservative. It does not fully exploit cross-item error correlations. The primary benefit is portfolio coherence: the reconciled sum is guaranteed to match the Holt-Winters total, eliminating the planning inconsistency.
 
@@ -549,12 +550,12 @@ score = stability_component + activity_component + history_component
 
 | Grade | Items | % |
 |---|---|---|
-| A | 122 | 8.9% |
-| B | 445 | 32.5% |
-| C | 322 | 23.5% |
-| D | 479 | 35.0% |
+| A | 8 | 0.6% |
+| B | 391 | 28.6% |
+| C | 497 | 36.3% |
+| D | 472 | 34.5% |
 
-The 35% D-grade fraction is expected given the 664 intermittent items. Their sparse sales history structurally limits forecast reliability. All Tier A items (13 highest-revenue SKUs) fall in grade A or B.
+The 34.5% D-grade fraction is expected given the 664 intermittent items. Their sparse sales history structurally limits forecast reliability. All Tier A items (13 highest-revenue SKUs) fall in grade A or B.
 
 ### Score Validation
 
@@ -605,16 +606,16 @@ MAPE = mean over (item, month) pairs where Revenue > 0
 
 | Model | Rev-wtd MAPE (all) | Rev-wtd MAPE (regular) | Rev-wtd MAPE (intermittent) | Unweighted MAPE |
 |---|---|---|---|---|
-| **Improved (this notebook)** | **47.56%** | **42.76%** | **61.86%** | **184.73%** |
-| v4 baseline (item_forecasting.ipynb) | 123.69% | 78.86% | n/a | 133.31% |
+| **Improved (this notebook)** | **46.58%** | **41.53%** | **61.61%** | **182.27%** |
+| v4 baseline (item_forecasting.ipynb) | 123.69% | 79.54% | n/a | 133.31% |
 | Seasonal Naive | 65.94% | 61.55% | 84.49% | — |
 
 **Portfolio aggregate accuracy (monthly sum vs actual total):**
 
 | | This Notebook (MinT) | Holt-Winters (standalone) |
 |---|---|---|
-| Aggregate MAPE (monthly) | **10.6%** | 19.3% |
-| 10-month total bias | −7.8% ($62M forecast vs $67M actual) | +13.4% |
+| Aggregate MAPE (monthly) | **11.0%** | 19.3% |
+| 10-month total bias | −8.4% ($61.4M forecast vs $67.0M actual) | +13.4% |
 
 ### Statistical Validation
 
@@ -624,18 +625,18 @@ Wilcoxon signed-rank test on 7,898 item-month pairs where Revenue > 0:
 H0: improved absolute errors = naive absolute errors
 H1: improved absolute errors < naive absolute errors  (one-sided)
 
-Test statistic:  10,904,662
-p-value:         1.90 × 10⁻¹¹⁸
+Test statistic:  10,494,610
+p-value:         1.08 × 10⁻¹³⁹
 
-Median |error| (improved):  $957
+Median |error| (improved):  $930
 Median |error| (naive):    $1,304
-Improvement:               35.3%
+Improvement:               28.7%
 
 Conclusion: STRONG evidence — improved model significantly outperforms
             seasonal naive at p << 0.001
 ```
 
-The p-value of 1.9 × 10⁻¹¹⁸ is not a rounding artefact — with 7,898 paired observations, the Wilcoxon statistic has sufficient resolution to detect an effect this large with overwhelming confidence.
+The p-value of 1.08 × 10⁻¹³⁹ is not a rounding artefact. With 7,898 paired observations, the Wilcoxon statistic has sufficient resolution to detect an effect this large with overwhelming confidence.
 
 ---
 
@@ -684,26 +685,26 @@ Using the full 50-month history for production retraining is standard practice: 
 
 ### Output CSV Schema
 
-`item_forecasts_improved.csv` — 1,368 rows, one per item:
+`item_forecasts_improved.csv` — 4,104 rows, long format (1,368 items × 3 months):
 
 | Column | Type | Description |
 |---|---|---|
 | `ItemCode` | str | SKU identifier |
-| `2026-03` | float | MinT-reconciled Mar 2026 forecast ($) |
-| `2026-04` | float | MinT-reconciled Apr 2026 forecast ($) |
-| `2026-05` | float | MinT-reconciled May 2026 forecast ($) |
-| `Total_Q2_2026` | float | 3-month total |
-| `item_pl` | str | Product line |
+| `YearMonth` | str | Forecast period (e.g. `2026-03`) |
+| `Forecast_Revenue` | float | MinT-reconciled monthly revenue forecast ($), floored at 0 |
+| `item_pl` | int | Product line code |
 | `tier` | str | Revenue tier (Tier_A through Tier_E) |
 | `is_intermittent` | bool | Whether item used statsforecast vs LightGBM |
+| `ForecastMethod` | str | `ensemble_lgb` or `croston_autoets` |
+| `confidence_score` | float | 0–100 numeric score |
+| `confidence_grade` | str | A / B / C / D |
 | `item_mean` | float | Mean monthly training revenue |
 | `item_cv` | float | Coefficient of variation (training period) |
 | `item_active_rate` | float | Fraction of training months with revenue > 0 |
 | `item_months` | int | Number of training months with data |
 | `item_trend_slope` | float | Normalised linear trend slope |
-| `ForecastMethod` | str | `ensemble_lgb` or `intermittent_stats` |
-| `confidence_score` | float | 0–100 numeric score |
-| `confidence_grade` | str | A / B / C / D |
+
+`item_forecasts_tidy.csv` — same 4,104 rows produced by `tidy_output_file.py` with full tidy-data rules applied: snake_case column names (`item_code`, `year_month`, `forecast_revenue`, `product_line`, `forecast_method`), ISO-8601 dates, zero-padded product line string, `is_intermittent` as 0/1.
 
 ---
 
@@ -727,7 +728,7 @@ Using the full 50-month history for production retraining is standard practice: 
 
 ### Cross-series features are more impactful than model complexity
 
-The single largest driver of improvement over the prior version was not switching from XGBoost to LightGBM or from 28 to 70 features in general. It was specifically the product-line and total-market cross-series features. Revenue-weighted MAPE for regular items improved from 78.86% to 42.76%, and the majority of that improvement is attributable to items that were previously forecast in isolation suddenly having access to signals that their product line or the overall market was shifting.
+The single largest driver of improvement over the prior version was not switching from XGBoost to LightGBM or from 28 to 70 features in general. It was specifically the product-line and total-market cross-series features. Revenue-weighted MAPE for regular items improved from 79.54% to 41.53%, and the majority of that improvement is attributable to items that were previously forecast in isolation suddenly having access to signals that their product line or the overall market was shifting.
 
 The lesson: at the item level, an item's own lagged revenue is a weak signal. The item's share of a product line, and the product line's trajectory, are far more informative.
 
@@ -741,6 +742,6 @@ The accuracy improvement from MinT is real but small (−0.08 pp overall MAPE). 
 
 ### Intermittent item accuracy is bounded by data structure, not model choice
 
-The 61.86% revenue-weighted MAPE for intermittent items reflects a structural ceiling, not a model deficiency. For an item that sells in 8 of 40 training months with no detectable pattern, any forecast will produce large percentage errors. CrostonSBA + AutoETS is the right tool. It models the correct data generating process. Improving beyond ~60% for this segment requires either more history (time) or domain knowledge about which months are likely active (e.g., known seasonal catalogues).
+The 61.61% revenue-weighted MAPE for intermittent items reflects a structural ceiling, not a model deficiency. For an item that sells in 8 of 40 training months with no detectable pattern, any forecast will produce large percentage errors. CrostonSBA + AutoETS is the right tool. It models the correct data generating process. Improving beyond ~60% for this segment requires either more history (time) or domain knowledge about which months are likely active (e.g., known seasonal catalogues).
 
 ---

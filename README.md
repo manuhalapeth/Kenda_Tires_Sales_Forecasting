@@ -17,9 +17,11 @@ Kenda/
 ├── item_forecasting_improved.ipynb    # Final item-level forecast (production)
 │
 ├── item_forecasts_production.csv      # Output from item_forecasting.ipynb
-├── item_forecasts_improved.csv        # Output from item_forecasting_improved.ipynb
+├── item_forecasts_improved.csv        # Long-format output from item_forecasting_improved.ipynb (4,104 rows)
+├── item_forecasts_tidy.csv            # Tidy-rules output produced by tidy_output_file.py
 │
 ├── make_improved_notebook.py          # Script used to generate improved_forecasting.ipynb
+├── tidy_output_file.py                # Applies tidy data rules to item_forecasts_improved.csv → item_forecasts_tidy.csv
 ├── Kenda_Tires_Blog                   # Blog writeup on the project
 │
 ├── Data_Viz_Kenda.png                 # EDA visualization
@@ -41,7 +43,7 @@ This was the starting point. The notebook performs a comprehensive EDA on the ra
 
 The ML models (Linear Regression, Random Forest, XGBoost, Prophet) were fed features derived from the same month being predicted. Specifically:
 
-- **COGS (Cost of Goods Sold)**: This figure is only settled after the transactions of month T have occurred. It is not available before the month begins. It is a byproduct of the sale and not a predictor of it.
+- **COGS (Cost of Goods Sold)**: This figure is only settled after the transactions of month T have occurred. It is not available before the month begins — it is a byproduct of the sale, not a predictor of it.
 - **QtyShipped and NumTransactions**: These are counts of events that happened *during* month T, not before it. Including them as input features means the model is effectively told how busy the month is before being asked to predict how busy the month will be.
 - **NumCustomers and NumItems**: Similarly, knowing how many unique customers or SKUs were active in month T requires seeing all of month T's data.
 
@@ -167,17 +169,17 @@ Filtering Examples
 
 | Metric | Improved model | v4 baseline | Improvement |
 |---|---|---|---|
-| Revenue-weighted MAPE (all) | **47.56%** | 123.69% | +76 pp |
-| Revenue-weighted MAPE (regular) | **42.76%** | 78.86% | +36 pp |
-| Revenue-weighted MAPE (intermittent) | **61.86%** | n/a (no dedicated model) | — |
-| Portfolio aggregate MAPE (monthly) | **10.6%** | ~19%+ | vs HW alone at 19.3% |
-| Median absolute error per item-month | $957 | $1,304 (seasonal naive) | **35.3% lower** |
+| Revenue-weighted MAPE (all) | **46.58%** | 123.69% | +77 pp |
+| Revenue-weighted MAPE (regular) | **41.53%** | 79.54% | +38 pp |
+| Revenue-weighted MAPE (intermittent) | **61.61%** | n/a (no dedicated model) | — |
+| Portfolio aggregate MAPE (monthly) | **11.0%** | ~19%+ | vs HW alone at 19.3% |
+| Median absolute error per item-month | $930 | $1,304 (seasonal naive) | **28.7% lower** |
 
 **Why it's a success**
 
-The model was statistically validated. A Wilcoxon signed-rank test (n=7,898 item-months, one-sided H1: improved errors < naive errors) returned **p = 1.90 × 10⁻¹¹⁸**, providing overwhelming statistical evidence that the model's per-item absolute errors are significantly smaller than a seasonal naive baseline. 
+The model was statistically validated. A Wilcoxon signed-rank test (n=7,898 item-months, one-sided H1: improved errors < naive errors) returned **p = 1.08 × 10⁻¹³⁹**, providing overwhelming statistical evidence that the model's per-item absolute errors are significantly smaller than a seasonal naive baseline. 
 
-The portfolio-level aggregate MAPE of **10.6%** means that when you sum up all item-level forecasts for a given month, the total is within ~10% of actual total revenue. This is comparable to a dedicated aggregate time-series model (Holt-Winters at 19.3%) while also providing granular per-item breakdowns. This is something no aggregate model can offer.
+The portfolio-level aggregate MAPE of **11.0%** means that when you sum up all item-level forecasts for a given month, the total is within ~11% of actual total revenue. This is comparable to a dedicated aggregate time-series model (Holt-Winters at 19.3%) while also providing granular per-item breakdowns. This is something no aggregate model can offer.
 
 The confidence grading system is actionable. Items with grade A (confidence score ≥ 75) had a median test MAPE of ~46% in validation; items with grade D had ~70%+ median MAPE. This stratification lets inventory planners apply tight buffers to A-grade items and manual review to D-grade items, optimising working capital allocation.
 
@@ -189,7 +191,7 @@ The confidence grading system is actionable. Items with grade A (confidence scor
 
 **Why it happens**: The 664 intermittent items sell sporadically, months with zero revenue are common. When the actual revenue is $50 and the forecast is $300, MAPE is 500%. A handful of such extreme errors dominate the unweighted average, even if the revenue impact is negligible. This is a structural property of intermittent demand, not a model failure.
 
-**Mitigation**: Use revenue-weighted MAPE as the primary business metric (47.56% overall). The unweighted number is misleading because a $50/month SKU and a $500,000/month SKU receive equal weight. For operational decisions, sort by `Total_Q2_2026` descending, items with genuine revenue at stake are almost all grade A or B. Long-term: collect more data for intermittent items, or reclassify very-low-volume SKUs as non-forecastable and handle via safety stock only.
+**Mitigation**: Use revenue-weighted MAPE as the primary business metric (46.58% overall). The unweighted number is misleading because a $50/month SKU and a $500,000/month SKU receive equal weight. For operational decisions, sort by `Total_Q2_2026` descending, items with genuine revenue at stake are almost all grade A or B. Long-term: collect more data for intermittent items, or reclassify very-low-volume SKUs as non-forecastable and handle via safety stock only.
 
 ### 2. Short training history (50 months, 4 years)
 
@@ -271,19 +273,27 @@ The LightGBM model is a global model. It trains on all items simultaneously, so 
 Generated by `item_forecasting.ipynb` (v4). Contains per-item forecasts for Mar/Apr/May 2026 with proportional reconciliation and the original Forecast Confidence Score system.
 
 ### `item_forecasts_improved.csv`
-Generated by `item_forecasting_improved.ipynb` (final). The production deliverable. Columns:
+Generated by `item_forecasting_improved.ipynb` (final). The production deliverable in long format, 4,104 rows (1,368 items × 3 months). Columns:
 
 | Column | Description |
 |---|---|
 | `ItemCode` | SKU identifier |
-| `2026-03`, `2026-04`, `2026-05` | MinT-reconciled revenue forecast per month |
-| `Total_Q2_2026` | 3-month total |
-| `item_pl` | Product line |
+| `YearMonth` | Forecast period string (e.g. `2026-03`) |
+| `Forecast_Revenue` | MinT-reconciled revenue forecast ($), floored at 0 |
+| `item_pl` | Product line code (integer) |
 | `tier` | Revenue tier (Tier_A through Tier_E) |
 | `is_intermittent` | Whether item used CrostonSBA/AutoETS vs LightGBM |
-| `ForecastMethod` | `ensemble_lgb` or `intermittent_stats` |
+| `ForecastMethod` | `ensemble_lgb` or `croston_autoets` |
 | `confidence_score` | 0–100 numeric score |
 | `confidence_grade` | A (trust), B (normal buffer), C (extra buffer), D (manual review) |
+| `item_mean` | Mean monthly training revenue |
+| `item_cv` | Coefficient of variation (training period) |
+| `item_active_rate` | Fraction of training months with revenue > 0 |
+| `item_months` | Number of training months with data |
+| `item_trend_slope` | Normalised linear trend slope |
+
+### `item_forecasts_tidy.csv`
+Generated by `tidy_output_file.py` from `item_forecasts_improved.csv`. Applies full tidy-data rules: all column names standardised to snake_case, `year_month` converted to ISO-8601 date (`YYYY-MM-DD`, first of month), `product_line` zero-padded to 4-digit string code, `is_intermittent` converted to 0/1 integer, `forecast_revenue` floored at 0, columns ordered identifiers → measure → categorical descriptors → numeric metadata, rows sorted by `item_code` then `year_month`.
 
 ---
 
