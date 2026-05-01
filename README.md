@@ -82,7 +82,7 @@ Kenda/
 
   | File | Description |
   |---|---|
-  | `item_forecasts_improved.csv` | Full Q2 2026 forecasts — 1,368 items × 3months, with confidence grades|                   
+  | `item_forecasts_improved.csv` | Full Q2 2026 forecasts: 1,368 items × 3months, with confidence grades|                   
   | `item_forecasts_tidy.csv` | Tidy-format version of the above (run
   `tidy_output_file.py` separately) |                                         
   | `figures/` | All report figures saved automatically |
