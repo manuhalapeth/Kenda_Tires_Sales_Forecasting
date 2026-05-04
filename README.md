@@ -43,8 +43,8 @@ Kenda/
 Clone the repository and install dependencies directly from within the notebook. No separate `requirements.txt` is needed. Cell 1 of the notebook handles all package installation automatically:
 
 ```bash
-git clone https://github.com/manuhalapeth/Kenda.git
-cd Kenda
+git clone https://github.com/manuhalapeth/Kenda_Tires_Sales_Forecasting.git
+cd Kenda_Tires_Sales_Forecasting
 jupyter notebook item_forecasting_improved.ipynb
 ```
 
